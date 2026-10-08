@@ -1,0 +1,25 @@
+# audio and results stay local (participant data must not be committed)
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+*.aif
+*.aiff
+tempo_summary_*.csv
+*_beats.csv
+tempo_taps_*.csv
+octave_check.csv
+examples/test_audio/
+
+# Python / Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,12 @@
+name: vocal-tempo
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - pandas
+  - librosa>=0.10
+  - pysoundfile
+  - matplotlib
+  - jupyter

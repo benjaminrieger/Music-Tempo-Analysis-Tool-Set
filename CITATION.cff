@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Music Tempo Analysis Tool Set: tempo estimation and annotation for sung recordings"
+authors:
+  - family-names: Rieger
+    given-names: Benjamin D.
+    affiliation: "TU Dresden, Centre for Tactile Internet with Human-in-the-Loop (CeTI)"
+version: 1.0.0
+date-released: 2026-10-08
+license: MIT
+repository-code: "https://github.com/benjaminrieger/Music-Tempo-Analysis-Tool-Set"
+keywords:
+  - tempo estimation
+  - beat tracking
+  - librosa
+  - singing
+  - lullabies
+  - music perception
