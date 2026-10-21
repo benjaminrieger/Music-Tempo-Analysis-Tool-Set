@@ -7,7 +7,7 @@ The recordings and the participant data are not part of this repository.
 | Script | Step |
 |---|---|
 | `build_tempo_corrected.py` | Octave check. Combines the tempo values (DAW estimates, sheet "Experimental Data") with the blind hand taps from `tools/tempo_tapper.html`, halves or doubles values whose ratio to the tap is nearest 2:1 or 1:2, and writes `Tempo_Corrected.xlsx` |
-| `tempo_analysis.py` | All statistics and figures: linear mixed models on log2 BPM, random-slopes check, continent tests, paired within-participant comparisons, exploratory covariates, sensitivity analyses. Writes `results.xlsx`, `report.txt` and `figures/` |
+| `tempo_analysis.py` | All statistics and figures: linear mixed models on log2 BPM, random-slopes check, continent tests, paired within-participant comparisons, exploratory covariates, sensitivity analyses. The main analysis uses the DAW tempo values; the octave-corrected values are a sensitivity analysis (`PRIMARY`). Writes `results.xlsx`, `report.txt` and `figures/` |
 | `retap_prepare.py` | Inter-rater check, step 1: draws 50 random included recordings (fixed seed) and copies them into a new folder for a second rater, who taps them blind |
 | `retap_compare.py` | Inter-rater check, step 2: compares the second rater with the first (same metrical level, same octave decision, ICC(A,1) on log2 BPM) |
 
@@ -32,6 +32,6 @@ and statsmodels MixedLM is used only as a cross-check when it is installed.
 
 ## Settings that change results
 
-All at the top of each script: `PRIMARY` and `MANUAL_DECISIONS` (octave check),
+All at the top of each script: `PRIMARY` and `MANUAL_DECISIONS` (octave check in `build_tempo_corrected.py`), `PRIMARY` in `tempo_analysis.py` (which values the main analysis uses),
 `EXCLUDE_COUNTRIES` (default Australia, which belongs to none of the five sampled
 continents), `TRAINING_BLANK_AS`, `MERGE_OLDEST_AGE` and `USE_LOG` (analysis).

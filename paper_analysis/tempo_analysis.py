@@ -9,7 +9,7 @@ Output: <OUT_DIR>/results.xlsx   one workbook, one tab per analysis
 
 Analysis plan
   1  Sample: participants and recordings per continent, demographics.
-  2  Descriptives: corrected BPM per song type and per continent x song type.
+  2  Descriptives: BPM per song type and per continent x song type (values set by PRIMARY).
   3  Main model: linear mixed model, log2(BPM) ~ song type + (1 | participant).
      Song-type differences reported as % tempo difference with 95% CI.
   3b Random-slopes check: the same contrasts with an unstructured within-participant
@@ -21,8 +21,8 @@ Analysis plan
   5  Model-free check: paired within-participant comparisons (paired t on
      log2 BPM and Wilcoxon), Holm-corrected, dz effect sizes.
   6  Covariates (exploratory): gender, age, children, musical training.
-  8  Sensitivity: main model and paired tests on uncorrected BPM and without
-     the octave-corrected recordings.
+  8  Sensitivity: main model and paired tests on the other set of values (octave-corrected
+     when PRIMARY = "ableton") and without the recordings flagged by the octave check.
 Country-level comparisons are not run: most countries have too few participants.
 Countries in EXCLUDE_COUNTRIES (default: Australia, 3 participants, which belongs to none of
 the five sampled continents) are removed before all analyses.
@@ -69,6 +69,11 @@ INPUT   = os.path.join(PROJECT, "03_output", "Tempo_Corrected.xlsx")
 OUT_DIR = os.path.join(PROJECT, "03_output", "tempo_analysis_output")
 
 USE_LOG = True              # model log2(BPM) (recommended) or raw BPM
+# Which tempo values the main analysis uses:
+#   "ableton"   = DAW values as analysed (metrical level set by tapping along in Ableton);
+#                 the octave-corrected values are a sensitivity analysis   (paper default)
+#   "corrected" = octave-corrected values as main analysis; DAW values as sensitivity
+PRIMARY = "ableton"
 REF_SONG = "Lullaby"        # reference level for song-type contrasts
 
 # Australia is labelled "Asia " in the source sheet. Set the continent to use.
@@ -90,6 +95,9 @@ SEED = 1
 # =============================================================================
 
 SONGS = ["Lullaby", "Love song", "Sleep song"]
+MAIN_LABEL = "Ableton" if PRIMARY == "ableton" else "corrected"
+ALT_LABEL = "octave-corrected" if PRIMARY == "ableton" else "uncorrected"
+FLAG_LABEL = "without recordings flagged by the octave check"
 COLORS = {"Lullaby": "#2a78d6", "Love song": "#eb6834", "Sleep song": "#1baf7a"}  # validated, colour-blind safe
 INK, INK2, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 
@@ -181,8 +189,15 @@ def load():
     excluded = d[d["status"] != "Included"]
     d = d[(d["status"] == "Included") & d["bpm"].notna() & (d["continent"] != "X")].copy()
     d["song_type"] = pd.Categorical(d["song_type"], SONGS)
+    d["bpm_corr"] = d["bpm"]
+    if PRIMARY == "ableton":
+        d["bpm"], d["bpm_alt"] = d["bpm_raw"], d["bpm_corr"]
+    else:
+        d["bpm"], d["bpm_alt"] = d["bpm_corr"], d["bpm_raw"]
+    if d["bpm"].isna().any():
+        sys.exit("Missing tempo values among included recordings: " + ", ".join(map(str, d.loc[d.bpm.isna(), "pid"])))
     d["y"] = np.log2(d["bpm"]) if USE_LOG else d["bpm"]
-    d["y_raw"] = np.log2(d["bpm_raw"]) if USE_LOG else d["bpm_raw"]
+    d["y_alt"] = np.log2(d["bpm_alt"]) if USE_LOG else d["bpm_alt"]
     d["corrected"] = d["correction"].isin(["halved", "doubled"])
     say(f"Loaded {n_all} recordings; {len(excluded)} excluded (skipped during tapping); "
         f"{len(d)} analysed from {d['pid'].nunique()} participants.")
@@ -370,7 +385,7 @@ def sample_and_descriptives(d):
     say("  Recordings per song type: " + ", ".join(f"{k} {v.recordings} ({v.corrected} octave-corrected)"
                                                   for k, v in rec.iterrows()))
 
-    say("\n== 2 Descriptives (corrected BPM) ==")
+    say(f"\n== 2 Descriptives ({MAIN_LABEL} BPM) ==")
     ds = d.groupby("song_type", observed=True)["bpm"].apply(describe).unstack()
     TABLES["Descriptives"] = ds.reset_index()
     for k, r in ds.iterrows():
@@ -383,7 +398,8 @@ def sample_and_descriptives(d):
 # =============================================================================
 # 3-4  MIXED MODELS
 # =============================================================================
-def models(d, ycol="y", label="corrected"):
+def models(d, ycol="y", label=None):
+    label = label or MAIN_LABEL
     out = {}
     m0 = fit_terms(d, ycol, [], reml=False)
     m1_ml = fit_terms(d, ycol, ["song_type"], reml=False)
@@ -432,7 +448,8 @@ def report_models(o, label):
     say(f"  [{label}] Song type x continent: LRT chi2({df}) = {s:.2f}, p = {p:.3g}")
 
 
-def unstructured_check(d, ycol="y", label="corrected"):
+def unstructured_check(d, ycol="y", label=None):
+    label = label or MAIN_LABEL
     """Random-slopes check. Each participant sang each song type at most once, so a model with a
     random intercept plus random song-type slopes is equivalent to letting the three song types have
     their own variances and correlations within a participant (unstructured covariance). Fixed effects
@@ -567,7 +584,8 @@ def lullaby_continents(d):
 # =============================================================================
 # 5  PAIRED WITHIN-PARTICIPANT COMPARISONS
 # =============================================================================
-def paired(d, ycol="y", bpmcol="bpm", label="corrected"):
+def paired(d, ycol="y", bpmcol="bpm", label=None):
+    label = label or MAIN_LABEL
     w = d.pivot_table(index="pid", columns="song_type", values=ycol, observed=True)
     wb = d.pivot_table(index="pid", columns="song_type", values=bpmcol, observed=True)
     rows = []
@@ -755,9 +773,9 @@ def fig_corrections(d):
     ax.scatter(keep.bpm_tap, keep.bpm_raw, s=10, color="#9b9a95", alpha=0.6, linewidths=0, label="Unchanged", zorder=2)
     ax.scatter(fix.bpm_tap, fix.bpm_raw, s=16, facecolors="none", edgecolors=COLORS["Love song"], lw=1,
                label="Before correction", zorder=3)
-    ax.scatter(fix.bpm_tap, fix.bpm, s=16, color=COLORS["Love song"], linewidths=0, label="After correction", zorder=4)
+    ax.scatter(fix.bpm_tap, fix.bpm_corr, s=16, color=COLORS["Love song"], linewidths=0, label="After correction", zorder=4)
     for _, r in fix.iterrows():
-        ax.plot([r.bpm_tap, r.bpm_tap], [r.bpm_raw, r.bpm], color=COLORS["Love song"], lw=0.5, alpha=0.6, zorder=2)
+        ax.plot([r.bpm_tap, r.bpm_tap], [r.bpm_raw, r.bpm_corr], color=COLORS["Love song"], lw=0.5, alpha=0.6, zorder=2)
     log_bpm_axis(ax, lo, hi, ticks=(40, 50, 60, 80, 100, 120, 160))
     log_bpm_axis(ax, lo, hi, axis="x", ticks=(40, 50, 60, 80, 100, 120, 160))
     ax.set_xlabel("Hand-tapped tempo (BPM)")
@@ -777,11 +795,11 @@ def main():
     say("\n== 3-4 Mixed models (" + ("log2 BPM" if USE_LOG else "BPM")
         + ", random intercept per participant) ==")
     o = models(d)
-    report_models(o, "corrected")
+    report_models(o, MAIN_LABEL)
     TABLES["M1 song type"] = o["m1"]
     TABLES["M1 contrasts"] = o["contrasts"]
     TABLES["M3 song x continent"] = o["m3"]
-    lrts = [{"analysis": "corrected", "test": k, "chi2": o[k][0], "df": o[k][1], "p": o[k][2]}
+    lrts = [{"analysis": MAIN_LABEL, "test": k, "chi2": o[k][0], "df": o[k][1], "p": o[k][2]}
             for k in ("song_lrt", "continent_lrt", "interaction_lrt")]
 
     say("\n== 3b Random-slopes check (unstructured within-participant covariance) ==")
@@ -799,12 +817,13 @@ def main():
 
     say("\n== 8 Sensitivity ==")
     dr = d.copy()
-    dr["y"] = dr["y_raw"]
+    dr["y"] = dr["y_alt"]
+    dr["bpm"] = dr["bpm_alt"]
     dn = d[~d.corrected]
-    pr = paired(dr, bpmcol="bpm_raw", label="uncorrected")
-    pn = paired(dn, label="without corrected recordings")
+    pr = paired(dr, label=ALT_LABEL)
+    pn = paired(dn, label=FLAG_LABEL)
     contrasts = [o["contrasts"]]
-    for lab, data in (("uncorrected", dr), ("without corrected recordings", dn)):
+    for lab, data in ((ALT_LABEL, dr), (FLAG_LABEL, dn)):
         o2 = models(data, label=lab)
         report_models(o2, lab)
         contrasts.append(o2["contrasts"])
