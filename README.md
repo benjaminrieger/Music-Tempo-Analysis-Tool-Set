@@ -18,7 +18,7 @@ Developed for the cross-continental lullaby studies at TU Dresden (CeTI).
 | [`tools/tempo_tapper.html`](tools/tempo_tapper.html) | Browser tool for blind hand-tapping of tempo. No installation |
 | [`tools/octave_check.py`](tools/octave_check.py) | Compares algorithm tempi with hand taps and corrects double/half-time errors |
 | [`tools/convert_to_pcm.py`](tools/convert_to_pcm.py) | Converts audio to plain WAV (needed when the tapper plays no sound) |
-| [`paper_analysis/`](paper_analysis) | Analysis scripts of the lullaby tempo paper: octave check, statistics, figures, intra-rater check |
+| [`paper_analysis/`](paper_analysis) | Analysis scripts of the lullaby tempo paper: octave check, statistics, figures, inter-rater check |
 | [`examples/self_test.py`](examples/self_test.py) | Generates synthetic singing at known tempi and checks the installation |
 | [`docs/presentation/`](docs/presentation) | Talk "Adapting Tempo Analysis for Your Data": tuning librosa for vocal and non-standard audio (PDF and editable PPTX) |
 | [`docs/`](docs) | Installation, method and parameters, tapper guide |

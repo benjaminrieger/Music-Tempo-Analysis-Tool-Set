@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Intra-rater check, step 2: compare the second tapping of the 50 recordings with the first.
+Inter-rater check, step 2: compare the second rater's taps of the 50 recordings with the first rater's.
 
 What it reports
-  1  Metrical level: in how many recordings the second tap lands on the same metrical level
+  1  Metrical level: in how many recordings the second rater taps the same metrical level
      as the first (ratio second/first nearest to 1:1 rather than 2:1, 1:2, 3:2, ...).
   2  Octave decision: whether the octave check (halve / double / keep), run with the second
-     tap instead of the first, reaches the same decision for each recording. This is the
+     rater's tap instead of the first, reaches the same decision for each recording. This is the
      agreement that matters for the paper, because the tap only decides the metrical level.
   3  Tempo agreement: ICC(A,1) (two-way, absolute agreement, single measure; McGraw & Wong,
      1996) on log2 tapped BPM, with 95% CI, and the median absolute difference in percent.
 
-Run from 02_code after exporting the second tapping into 01_data:
+Run from 02_code after the second rater's CSV export is in 01_data:
     python retap_compare.py
-or name the file:  python retap_compare.py ..\\01_data\\tempo_taps_BR2_....csv
+or name the file:  python retap_compare.py ..\\01_data\\tempo_taps_RP_....csv
 """
 
 import glob
@@ -30,7 +30,8 @@ DATA = os.path.join(PROJECT, "01_data")
 TEMPO_XLSX = os.path.join(PROJECT, "03_output", "Tempo_Corrected.xlsx")
 LIST_CSV = os.path.join(DATA, "retest_50_list.csv")
 OUT_TXT = os.path.join(PROJECT, "03_output", "retap_report.txt")
-RETAP_PATTERN = "tempo_taps_BR2_*.csv"
+RATER2 = "RP"                       # initials the second rater entered in the tapper
+RETAP_PATTERN = f"tempo_taps_{RATER2}_*.csv"
 RELATIONS = {"1:3": 1 / 3, "1:2": 1 / 2, "2:3": 2 / 3, "1:1": 1.0, "3:2": 3 / 2, "2:1": 2.0, "3:1": 3.0}
 # ---------------------------------------------------------------------------
 
@@ -70,8 +71,8 @@ def main():
     else:
         found = sorted(glob.glob(os.path.join(DATA, RETAP_PATTERN)))
         if not found:
-            sys.exit(f"No file matching {RETAP_PATTERN} in {DATA}. Export the second tapping there "
-                     f"(rater initials BR2) or pass the file name.")
+            sys.exit(f"No file matching {RETAP_PATTERN} in {DATA}. Export the second rater's CSV there "
+                     f"(rater initials {RATER2}) or pass the file name.")
         retap_file = found[-1]
     clips = pd.read_excel(TEMPO_XLSX, sheet_name="All clips")
     sel = pd.read_csv(LIST_CSV)
@@ -102,13 +103,13 @@ def main():
 
     out = []
     say = out.append
-    say(f"Second tapping: {os.path.basename(retap_file)}")
-    say(f"Recordings compared: {n} of {len(sel)}" + (f" ({len(missing)} skipped or missing in the second tapping)" if len(missing) else ""))
+    say(f"Second rater ({RATER2}): {os.path.basename(retap_file)}")
+    say(f"Recordings compared: {n} of {len(sel)}" + (f" ({len(missing)} skipped or missing for the second rater)" if len(missing) else ""))
     say("")
-    say(f"1  Same metrical level in both tappings: {d['same_level'].sum()} of {n} ({100 * d['same_level'].mean():.0f}%)")
-    say("   Relation of second to first tap: " + ", ".join(f"{k} {v}" for k, v in d["level"].value_counts().items()))
+    say(f"1  Same metrical level for both raters: {d['same_level'].sum()} of {n} ({100 * d['same_level'].mean():.0f}%)")
+    say("   Relation of second to first rater's tap: " + ", ".join(f"{k} {v}" for k, v in d["level"].value_counts().items()))
     say(f"2  Same octave decision (keep/halve/double): {d['same_action'].sum()} of {n} ({100 * d['same_action'].mean():.0f}%)")
-    say(f"   Recordings corrected in the first tapping that were in the sample: {(d['action1_rule'] != 'keep').sum()}")
+    say(f"   Recordings in the sample corrected on the basis of the first rater's tap: {(d['action1_rule'] != 'keep').sum()}")
     say(f"3  ICC(A,1) on log2 tapped BPM, all recordings: {icc:.2f} [95% CI {lo:.2f}, {hi:.2f}]")
     say(f"   ICC(A,1), recordings tapped at the same level: {icc_s:.2f} [95% CI {lo_s:.2f}, {hi_s:.2f}], n = {len(same)}")
     say(f"   Median absolute difference at the same level: {same['abs_pct'].median():.1f}% "
@@ -117,12 +118,12 @@ def main():
     if len(dis):
         say("\nRecordings with a different octave decision:")
         for _, r in dis.iterrows():
-            say(f"   {r.filename}: analysed {r.analysed_bpm:.1f}, tap 1 {r.tap1:.1f} ({r.action1_rule}), "
-                f"tap 2 {r.tap2:.1f} ({r.action2})")
+            say(f"   {r.filename}: analysed {r.analysed_bpm:.1f}, rater 1 {r.tap1:.1f} ({r.action1_rule}), "
+                f"rater 2 {r.tap2:.1f} ({r.action2})")
     say("\nDraft sentence for the paper (check the numbers above first):")
-    say(f"   To assess the consistency of the tapping, {n} randomly selected recordings were tapped a second time "
-        f"by the same listener, blind to the first tapping. The second tap fell on the same metrical level as the "
-        f"first in {d['same_level'].sum()} of {n} recordings, and the octave check reached the same decision in "
+    say(f"   To assess the reliability of the tapping, {n} randomly selected recordings were tapped by a second "
+        f"listener with the same tool, blind to the first listener's taps, the software estimate, song type and "
+        f"origin. The two listeners tapped the same metrical level in {d['same_level'].sum()} of {n} recordings, and the octave check reached the same decision in "
         f"{d['same_action'].sum()} of {n} recordings (ICC(A,1) on log tempo = {icc:.2f}, 95% CI [{lo:.2f}, {hi:.2f}]).")
     txt = "\n".join(out)
     print(txt)

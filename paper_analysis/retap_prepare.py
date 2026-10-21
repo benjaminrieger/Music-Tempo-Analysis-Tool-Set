@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Intra-rater check, step 1: draw 50 random recordings and copy them into a new folder.
+Inter-rater check, step 1: draw 50 random recordings and copy them into a new folder.
 
 The sample is drawn from the recordings included in the analysis (Tempo_Corrected.xlsx,
 sheet "All clips", status Included, countries in EXCLUDE_COUNTRIES left out), with a fixed
 seed, so it is reproducible. The files are copied into 01_data/retest_50. Open that folder
-in tools/tempo_tapper.html: the tapper keeps its progress per folder name, so the earlier
-taps are not shown, and the order is randomised.
+in tools/tempo_tapper.html for the second rater: the tapper keeps its progress per folder
+name, so no earlier taps are shown, and file names, song types and countries stay hidden.
 
 Run from 02_code:
     python retap_prepare.py
-Then tap the folder in the tapper with rater initials BR2 and export the CSV into 01_data.
+Then the second rater taps the folder with rater initials RP and exports the CSV into 01_data.
 """
 
 import os
@@ -24,7 +24,7 @@ import pandas as pd
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(PROJECT, "01_data")
 TEMPO_XLSX = os.path.join(PROJECT, "03_output", "Tempo_Corrected.xlsx")
-RECORDINGS = os.path.join(DATA, "recordings_pcm")   # the folder you tapped originally
+RECORDINGS = os.path.join(DATA, "recordings_pcm")   # the folder the first rater tapped
 OUT_FOLDER = os.path.join(DATA, "retest_50")
 LIST_CSV = os.path.join(DATA, "retest_50_list.csv")
 N = 50
