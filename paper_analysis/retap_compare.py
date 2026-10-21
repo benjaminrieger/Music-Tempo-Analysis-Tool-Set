@@ -69,10 +69,14 @@ def main():
     if len(sys.argv) > 1:
         retap_file = sys.argv[1]
     else:
+        downloads = os.path.join(os.path.expanduser("~"), "Downloads")
         found = sorted(glob.glob(os.path.join(DATA, RETAP_PATTERN)))
+        if not found:   # the browser saves the export to Downloads by default
+            found = sorted(glob.glob(os.path.join(downloads, RETAP_PATTERN)))
         if not found:
-            sys.exit(f"No file matching {RETAP_PATTERN} in {DATA}. Export the second rater's CSV there "
-                     f"(rater initials {RATER2}) or pass the file name.")
+            sys.exit(f"No file matching {RETAP_PATTERN} in {DATA} or {downloads}.\n"
+                     f"The second rater taps 01_data/retest_50 with initials {RATER2} and exports the CSV; "
+                     f"or pass the file name: python retap_compare.py <path to csv>")
         retap_file = found[-1]
     clips = pd.read_excel(TEMPO_XLSX, sheet_name="All clips")
     sel = pd.read_csv(LIST_CSV)
@@ -122,7 +126,7 @@ def main():
                 f"rater 2 {r.tap2:.1f} ({r.action2})")
     say("\nDraft sentence for the paper (check the numbers above first):")
     say(f"   To assess the reliability of the tapping, {n} randomly selected recordings were tapped by a second "
-        f"listener with the same tool, blind to the first listener's taps, the software estimate, song type and "
+        f"listener, a colleague with several years of musical experience as a rapper, with the same tool, blind to the first listener's taps, the software estimate, song type and "
         f"origin. The two listeners tapped the same metrical level in {d['same_level'].sum()} of {n} recordings, and the octave check reached the same decision in "
         f"{d['same_action'].sum()} of {n} recordings (ICC(A,1) on log tempo = {icc:.2f}, 95% CI [{lo:.2f}, {hi:.2f}]).")
     txt = "\n".join(out)
