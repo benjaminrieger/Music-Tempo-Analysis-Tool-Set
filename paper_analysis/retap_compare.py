@@ -65,6 +65,14 @@ def icc_a1(x, y):
     return icc, lo, hi
 
 
+def cohen_kappa(a, b):
+    a = pd.Series(list(a)); b = pd.Series(list(b))
+    cats = sorted(set(a) | set(b))
+    po = (a.values == b.values).mean()
+    pe = sum((a == c).mean() * (b == c).mean() for c in cats)
+    return (po - pe) / (1 - pe) if pe < 1 else np.nan
+
+
 def main():
     if len(sys.argv) > 1:
         retap_file = sys.argv[1]
@@ -113,7 +121,16 @@ def main():
     say(f"1  Same metrical level for both raters: {d['same_level'].sum()} of {n} ({100 * d['same_level'].mean():.0f}%)")
     say("   Relation of second to first rater's tap: " + ", ".join(f"{k} {v}" for k, v in d["level"].value_counts().items()))
     say(f"2  Same octave decision (keep/halve/double): {d['same_action'].sum()} of {n} ({100 * d['same_action'].mean():.0f}%)")
-    say(f"   Recordings in the sample corrected on the basis of the first rater's tap: {(d['action1_rule'] != 'keep').sum()}")
+    say(f"   Recordings in the sample corrected on the basis of the first rater's tap: {(d['action1_rule'] != 'keep').sum()}, "
+        f"of the second rater's tap: {(d['action2'] != 'keep').sum()}, of both: "
+        f"{((d['action1_rule'] != 'keep') & (d['action1_rule'] == d['action2'])).sum()}")
+    k3 = cohen_kappa(d["action1_rule"], d["action2"])
+    k2 = cohen_kappa(d["action1_rule"] != "keep", d["action2"] != "keep")
+    say(f"   Cohen's kappa (chance-corrected agreement): keep/halve/double {k3:.2f}; corrected vs not {k2:.2f}")
+    r1 = d["analysed_bpm"] / d["tap1"]
+    zone = ((r1 > 1.6) & (r1 < 1.9)) | ((r1 > 1 / 1.9) & (r1 < 1 / 1.6))
+    say(f"   Recordings whose ratio to the first rater's tap lies near the 3:2 / 2:1 boundary (1.6 to 1.9 or inverse): "
+        f"{zone.sum()}, of which with a different decision: {(zone & ~d['same_action']).sum()}")
     say(f"3  ICC(A,1) on log2 tapped BPM, all recordings: {icc:.2f} [95% CI {lo:.2f}, {hi:.2f}]")
     say(f"   ICC(A,1), recordings tapped at the same level: {icc_s:.2f} [95% CI {lo_s:.2f}, {hi_s:.2f}], n = {len(same)}")
     say(f"   Median absolute difference at the same level: {same['abs_pct'].median():.1f}% "
